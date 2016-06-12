@@ -203,5 +203,13 @@ int GCApplication::nextIter()
 	bgdPxls.clear(); fgdPxls.clear();
 	prBgdPxls.clear(); prFgdPxls.clear();
 
+
+	/*这里，已经完成分割了。你们应该在这里调用matting的函数
+	 *分割的结果存在mask中
+	 *Mask的Label值（确定背景：0， 确定前景：1，可能背景：2，可能前景：3)
+	 *你们可是使用mask和image，但是不要更改里面的值。
+	 *另外，GCApplication::showImage()函数可能也要改一下。
+	*/
+
 	return iterCount;
 }
