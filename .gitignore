@@ -1,0 +1,7 @@
+*
+GrabCut/*
+
+!GrabCut/*.cpp
+!GrabCut/*.h
+!GrabCut/instances.inc
+!.gitignore
