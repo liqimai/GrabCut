@@ -159,7 +159,7 @@ static void graphCut(InputArray _img, InputOutputArray _mask, InputArray _bgdMod
 	}
 
 	//add n-link
-	const double GAMMA = 10;
+	const double GAMMA = 3;
 	double BETA = BETA = 1 / (4 * getSDD(img));
 	for (size_t i = 0; i < rect.height; i++){
 		int img_row_num = rect.y + i;
@@ -541,7 +541,29 @@ static void initeGMM(cv::InputArray _img, cv::InputArray _mask, cv::OutputArray 
 	Mat mask = _mask.getMat();
 
 	/* pick out pixes */
-	vector < Point3f > points;
+	//vector < Point3f > points;
+	//for (size_t i = 0; i < mask.rows; i++){
+	//	Vec3b* p_img = img.ptr<Vec3b>(i);
+	//	uchar* p_mask = mask.ptr<uchar>(i);
+	//	for (size_t j = 0; j < mask.cols; j++){
+	//		switch (p_mask[j]){
+	//		case 0:
+	//		case 2:
+	//			if (back_or_fore == BACK_GROUND)
+	//				points.push_back(Point3f(p_img[j][0], p_img[j][1], p_img[j][2]));
+	//			break;
+	//		case 1:
+	//		case 3:
+	//			if (back_or_fore == FORE_GROUND)
+	//				points.push_back(Point3f(p_img[j][0], p_img[j][1], p_img[j][2]));
+	//			break;
+	//		default:
+	//			cerr << __FILE__ << ':' << __LINE__ << " Unknown mask value " << p_mask[j] << endl;
+	//			exit(1);
+	//		}
+	//	}
+	//}	
+	int pix_number = 0;
 	for (size_t i = 0; i < mask.rows; i++){
 		Vec3b* p_img = img.ptr<Vec3b>(i);
 		uchar* p_mask = mask.ptr<uchar>(i);
@@ -550,12 +572,12 @@ static void initeGMM(cv::InputArray _img, cv::InputArray _mask, cv::OutputArray 
 			case 0:
 			case 2:
 				if (back_or_fore == BACK_GROUND)
-					points.push_back(Point3f(p_img[j][0], p_img[j][1], p_img[j][2]));
+					pix_number++;
 				break;
 			case 1:
 			case 3:
 				if (back_or_fore == FORE_GROUND)
-					points.push_back(Point3f(p_img[j][0], p_img[j][1], p_img[j][2]));
+					pix_number++;
 				break;
 			default:
 				cerr << __FILE__ << ':' << __LINE__ << " Unknown mask value " << p_mask[j] << endl;
@@ -563,10 +585,44 @@ static void initeGMM(cv::InputArray _img, cv::InputArray _mask, cv::OutputArray 
 			}
 		}
 	}
-	TermCriteria criteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 10, 1e-7);
-	Mat bestLabels;
+	Mat points(pix_number, 3, CV_32F);
+	pix_number = 0;
+	for (size_t i = 0; i < mask.rows; i++){
+		Vec3b* p_img = img.ptr<Vec3b>(i);
+		uchar* p_mask = mask.ptr<uchar>(i);
+		for (size_t j = 0; j < mask.cols; j++){
+			switch (p_mask[j]){
+			case 0:
+			case 2:
+				if (back_or_fore == BACK_GROUND){
+					float* p = points.ptr<float>(pix_number);
+					p[0] = p_img[j][0];
+					p[1] = p_img[j][1];
+					p[2] = p_img[j][2];
+					pix_number++;
+				}
+				break;
+			case 1:
+			case 3:
+				if (back_or_fore == FORE_GROUND){
+					float* p = points.ptr<float>(pix_number);
+					p[0] = p_img[j][0];
+					p[1] = p_img[j][1];
+					p[2] = p_img[j][2];
+					pix_number++;
+				}
+				break;
+			default:
+				cerr << __FILE__ << ':' << __LINE__ << " Unknown mask value " << p_mask[j] << endl;
+				exit(1);
+			}
+		}
+	}
+
 
 	/* cluster */
+	TermCriteria criteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 20, 1e-7);
+	Mat bestLabels;
 	kmeans(points, K, bestLabels, criteria, 2, KMEANS_RANDOM_CENTERS);
 	if (! bestLabels.isContinuous()){
 		cerr << __FILE__ << ':' << __LINE__ << " bestLabels Mat is not continuous!" << endl;
@@ -577,14 +633,17 @@ static void initeGMM(cv::InputArray _img, cv::InputArray _mask, cv::OutputArray 
 	vector<Point3d> mu(K, Point3d(0, 0, 0));
 	vector<int> count(K, 0);	//k*1,int
 	int total_number = 0;
-	for (size_t i = 0; i < points.size(); i++){
+	//for (size_t i = 0; i < points.size(); i++){
+	for (size_t i = 0; i < points.rows; i++){
 		int k_i;
 		if (bestLabels.isContinuous())
 			k_i = pk[i];
 		else
 			k_i = bestLabels.at<long>(i, 0);
 		count[k_i]++;
-		mu[k_i] += Point3d(points[i].x, points[i].y, points[i].z);
+		//mu[k_i] += Point3d(points[i].x, points[i].y, points[i].z);
+		float* p = points.ptr<float>(i);
+		mu[k_i] += Point3d(p[0], p[1], p[2]);
 	}
 	for (size_t i = 0; i < K; i++){
 		mu[i] = mu[i] * (1.0 / count[i]);
@@ -603,14 +662,19 @@ static void initeGMM(cv::InputArray _img, cv::InputArray _mask, cv::OutputArray 
 		sigma1[i] = sigma[i].ptr<double>(1);
 		sigma2[i] = sigma[i].ptr<double>(2);
 	}
-	for (size_t i = 0; i < points.size(); i++){
+	//for (size_t i = 0; i < points.size(); i++){
+	for (size_t i = 0; i < points.rows; i++){
 		int k_i;
 		if (bestLabels.isContinuous())
 			k_i = pk[i];
 		else
 			k_i = bestLabels.at<long>(i, 0);
 
-		Point3d diff = Point3d(points[i]) - mu[k_i];
+		//Point3d diff = Point3d(points[i]) - mu[k_i];
+
+		float* p = points.ptr<float>(i);
+		Point3d diff = Point3d(p[0], p[1], p[2]) - mu[k_i];
+
 		sigma0[k_i][0] += diff.x*diff.x; sigma0[k_i][1] += diff.x*diff.y; sigma0[k_i][2] += diff.x*diff.z;
 		sigma1[k_i][0] += diff.y*diff.x; sigma1[k_i][1] += diff.y*diff.y; sigma1[k_i][2] += diff.y*diff.z;
 		sigma2[k_i][0] += diff.z*diff.x; sigma2[k_i][1] += diff.z*diff.y; sigma2[k_i][2] += diff.z*diff.z;
