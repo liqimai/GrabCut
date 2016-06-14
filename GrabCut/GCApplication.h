@@ -39,6 +39,7 @@ public:
 	void showImage() const;
 	void mouseClick( int event, int x, int y, int flags, void* param );
 	int nextIter();
+	void borderMatting();
 	int getIterCount() const { return iterCount; }
 private:
 	void setRectInMask();

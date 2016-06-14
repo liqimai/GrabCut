@@ -33,7 +33,8 @@ static void on_mouse( int event, int x, int y, int flags, void* param )
 int main(int argn, const char* argv[])
 {
 	system("cd");
-	string filename = argv[1];//"F:\\Data\\Ls_Data\\00\\0050.bmp";
+	//string filename = argv[1];//"F:\\Data\\Ls_Data\\00\\0050.bmp";
+	string filename = "C:\\classes\\junior second\\computational photography\\GrabCut\\picture\\flower.bmp";
 	Mat image = imread( filename );
 	if( image.empty() )
 	{
@@ -63,6 +64,12 @@ int main(int argn, const char* argv[])
 			gcapp.reset();
 			gcapp.showImage();
 			break;
+		case 'b':
+			cout << "Start border matting.";
+			gcapp.borderMatting();
+			gcapp.showImage();
+			cout << "image has been borderMatted." << endl;
+			break;
 		case 'n':
 			int iterCount = gcapp.getIterCount();
 			cout << "<" << iterCount << "... ";
@@ -75,7 +82,9 @@ int main(int argn, const char* argv[])
 			else
 				cout << "rect must be determined>" << endl;
 			break;
+		
 		}
+		
 	}
 
 exit_main:
@@ -84,3 +93,4 @@ exit_main:
 
 	return 0;
 }
+
